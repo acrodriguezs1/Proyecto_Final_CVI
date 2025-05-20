@@ -15,14 +15,18 @@ https://github.com/user-attachments/assets/d718aea4-b47c-4850-a331-4cb974fdf2e1
 ## Entrega 3
 
 
-### mesa En Blender
-La mesa para poder poner los osos y las cajas de dulces encimas
-![Captura de pantalla 2025-05-19 082259](https://github.com/user-attachments/assets/578a9881-88fc-4756-94ed-c0d46713579c)
+### Mesa En Blender
+La mesa para poder poner los osos y las cajas de dulces encimas modelo .blend en el modelo de GLTF en bloque Diligent 
 
+![Captura de pantalla 2025-05-19 082259](https://github.com/user-attachments/assets/578a9881-88fc-4756-94ed-c0d46713579c)
+https://github.com/user-attachments/assets/36427684-60b9-4efa-ae05-0b5e5a843a99
+
+### Cajas de dulces
+Se hicieron las cajas de dulces con ray tracing para que el usuario aumente o disminuyan dependienddo del usuari
 
 https://github.com/user-attachments/assets/6877fba8-8acb-45e2-a403-3e9573d1ea84
 
 
 
-https://github.com/user-attachments/assets/36427684-60b9-4efa-ae05-0b5e5a843a99
+
 
