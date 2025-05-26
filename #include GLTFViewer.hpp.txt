@@ -1,0 +1,69 @@
+#include "GLTFViewer.hpp"
+
+namespace Diligent
+{
+
+SampleBase* CreateSample()
+{
+    return new GLTFViewer();
+}
+
+GLTFViewer::GLTFViewer()
+{
+    m_Camera.SetDistRange(0.1f, 5.f);
+    m_Camera.SetDefaultDistance(0.9f);
+    m_Camera.ResetDefaults();
+}
+
+void GLTFViewer::Initialize(const SampleInitInfo& InitInfo)
+{
+    SampleBase::Initialize(InitInfo);
+
+    // Cargar directamente el modelo deseado
+    const char* ModelPath = "ruta/a/tu/modelo.gltf";
+    
+    // Configuración mínima del renderizador
+    GLTF_PBR_Renderer::CreateInfo RendererCI;
+    RendererCI.NumRenderTargets = 1;
+    RendererCI.RTVFormats[0] = m_pSwapChain->GetDesc().ColorBufferFormat;
+    RendererCI.DSVFormat = m_pSwapChain->GetDesc().DepthBufferFormat;
+    
+    m_GLTFRenderer = std::make_unique<GLTF_PBR_Renderer>(m_pDevice, nullptr, m_pImmediateContext, RendererCI);
+    
+    // Cargar el modelo
+    GLTF::ModelCreateInfo ModelCI;
+    ModelCI.FileName = ModelPath;
+    m_Model = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, ModelCI);
+    
+    // Configuración básica de cámara
+    m_RenderParams.SceneIndex = m_Model->DefaultSceneId;
+    UpdateScene();
+}
+
+void GLTFViewer::Render()
+{
+    ITextureView* pRTV = m_pSwapChain->GetCurrentBackBufferRTV();
+    ITextureView* pDSV = m_pSwapChain->GetDepthBufferDSV();
+    
+    // Limpiar buffers
+    const float ClearColor[] = {0.032f, 0.032f, 0.032f, 1.0f};
+    m_pImmediateContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    m_pImmediateContext->ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Renderizar modelo
+    m_GLTFRenderer->Begin(m_pImmediateContext);
+    m_GLTFRenderer->Render(m_pImmediateContext, *m_Model, m_Transforms[0], nullptr, m_RenderParams);
+}
+
+void GLTFViewer::Update(double CurrTime, double ElapsedTime)
+{
+    m_Camera.Update(m_InputController);
+    SampleBase::Update(CurrTime, ElapsedTime);
+    
+    // Actualizar transformaciones de cámara
+    float4x4 CameraView = m_Camera.GetViewMatrix();
+    float4x4 CameraProj = GetAdjustedProjectionMatrix(PI_F / 4.0f, 0.1f, 100.f);
+    m_RenderParams.ModelTransform = float4x4::Identity();
+}
+
+} // namespace Diligent
