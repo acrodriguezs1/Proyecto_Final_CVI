@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
@@ -36,15 +36,17 @@
 #include "AdvancedMath.hpp"
 #include "PlatformMisc.hpp"
 #include <random>
+#include "GLTFViewer.hpp"
 
 
 namespace Diligent
 {
-
+/*
 SampleBase* CreateSample()
 {
     return new Tutorial21_RayTracing();
 }
+*/
 
 void Tutorial21_RayTracing::CreateGraphicsPSO()
 {
@@ -636,14 +638,14 @@ void Tutorial21_RayTracing::UpdateTLAS()
 
     static std::string smallSphereNames[MaxSmallSpheres];
     int                gridSize = static_cast<int>(std::ceil(std::sqrt(MaxSmallSpheres)));
-    float              cellSize = 8.0 ; // Puedes ajustar este valor según el espacio que desees entre esferas
+    float              cellSize = 8.0; // Puedes ajustar este valor según el espacio que desees entre esferas
 
     for (int i = 0; i < MaxSmallSpheres; ++i)
     {
         int   idx  = 4 + i;
         auto& inst = Instances[idx];
 
-       
+
         smallSphereNames[i] = "SmallSphere" + std::to_string(i);
         inst.InstanceName   = smallSphereNames[i].c_str();
 
@@ -659,7 +661,7 @@ void Tutorial21_RayTracing::UpdateTLAS()
         float x = (col - gridSize / 2.0f) * cellSize;
         float z = (row - gridSize / 2.0f) * cellSize;
 
-        
+
         inst.Transform.SetTranslation(x, -4.89f, z);
     }
 
