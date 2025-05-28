@@ -36,5 +36,9 @@ https://github.com/user-attachments/assets/34a58a71-f494-469f-bcd1-4be4b5aec6e6
 
 
 
+Presentacion
+
+[Gummy Bear Biology Presentation in Colorful Illustrative Style (1).pdf](https://github.com/user-attachments/files/20475374/Gummy.Bear.Biology.Presentation.in.Colorful.Illustrative.Style.1.pdf)
+
 
 
