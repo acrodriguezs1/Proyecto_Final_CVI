@@ -27,6 +27,14 @@ Se hicieron las cajas de dulces con ray tracing para que el usuario aumente o di
 https://github.com/user-attachments/assets/6877fba8-8acb-45e2-a403-3e9573d1ea84
 
 
+## Entrega Final 
+
+
+
+https://github.com/user-attachments/assets/34a58a71-f494-469f-bcd1-4be4b5aec6e6
+
+
+
 
 
 
