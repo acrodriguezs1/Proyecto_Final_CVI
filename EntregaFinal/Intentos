@@ -1,0 +1,221 @@
+Para este intento se hizo lo siguiente:
+obj.LoadFromFile("D:/ISIS-4823/DiligentEngine/DiligentSamples/Samples/GLTFViewer/assets/models/CesiumMan/glTF/CesiumMan.gltf");
+La idea de este intento era importar la geometria utilizando las funciones de samples
+
+Ademas crear una funcion que formara la geometria como se hacia dentro del problema original 
+el problema que hubo con este ejemplo fue que al tratar de crear este GLTFBLAS era que al tratar 
+de realizar las operaciones similares a las del tutorial original no se cargaban
+void Tutorial21_RayTracing::CreateGLTFBLAS()
+{
+    const auto& mesh = obj.Meshes[0];
+    const auto& primitive = mesh.Primitives[0];
+
+    // Obtener datos de vértices
+    const auto& posAccessor = obj.Accessors[primitive.PositionAccessor];
+    const auto& posView = obj.BufferViews[posAccessor.BufferView];
+    const float* posData = reinterpret_cast<const float*>(
+        &obj.Buffers[posView.Buffer].Data[posView.ByteOffset + posAccessor.ByteOffset]);
+
+    std::vector<float3> Positions;
+    Positions.reserve(posAccessor.Count);
+    for (Uint32 i = 0; i < posAccessor.Count; ++i)
+    {
+        Positions.emplace_back(
+            posData[i * 3 + 0],
+            posData[i * 3 + 1],
+            posData[i * 3 + 2]);
+    }
+
+    // Crear buffer de vértices
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "GLTF Vertex Buffer";
+        BuffDesc.Usage = USAGE_IMMUTABLE;
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER | BIND_RAY_TRACING;
+        BuffDesc.Size = Positions.size() * sizeof(float3);
+
+        BufferData BufData{ Positions.data(), BuffDesc.Size };
+        m_pDevice->CreateBuffer(BuffDesc, &BufData, &m_GLTFVertexBuffer);
+    }
+
+    // Obtener datos de índices
+    const auto& indexAccessor = obj.Accessors[primitive.IndicesAccessor];
+    const auto& indexView = obj.BufferViews[indexAccessor.BufferView];
+    const void* indexData = &obj.Buffers[indexView.Buffer].Data[indexView.ByteOffset + indexAccessor.ByteOffset];
+
+    std::vector<Uint32> Indices;
+    Indices.reserve(indexAccessor.Count);
+
+    if (indexAccessor.ComponentType == VT_UINT16)
+    {
+        const Uint16* idx = reinterpret_cast<const Uint16*>(indexData);
+        for (Uint32 i = 0; i < indexAccessor.Count; ++i)
+            Indices.push_back(idx[i]);
+    }
+    else if (indexAccessor.ComponentType == VT_UINT32)
+    {
+        const Uint32* idx = reinterpret_cast<const Uint32*>(indexData);
+        for (Uint32 i = 0; i < indexAccessor.Count; ++i)
+            Indices.push_back(idx[i]);
+    }
+
+    // Crear buffer de índices
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "GLTF Index Buffer";
+        BuffDesc.Usage = USAGE_IMMUTABLE;
+        BuffDesc.BindFlags = BIND_INDEX_BUFFER | BIND_RAY_TRACING;
+        BuffDesc.Size = Indices.size() * sizeof(Uint32);
+
+        BufferData BufData{ Indices.data(), BuffDesc.Size };
+        m_pDevice->CreateBuffer(BuffDesc, &BufData, &m_GLTFIndexBuffer);
+    }
+
+    // Crear y construir BLAS
+    {
+        BLASTriangleDesc Triangles;
+        Triangles.GeometryName = "GLTF Model";
+        Triangles.MaxVertexCount = static_cast<Uint32>(Positions.size());
+        Triangles.VertexValueType = VT_FLOAT32;
+        Triangles.VertexComponentCount = 3;
+        Triangles.MaxPrimitiveCount = static_cast<Uint32>(Indices.size() / 3);
+        Triangles.IndexType = VT_UINT32;
+
+        BottomLevelASDesc ASDesc;
+        ASDesc.Name = "GLTF BLAS";
+        ASDesc.Flags = RAYTRACING_BUILD_AS_PREFER_FAST_TRACE;
+        ASDesc.pTriangles = &Triangles;
+        ASDesc.TriangleCount = 1;
+
+        m_pDevice->CreateBLAS(ASDesc, &m_pGLTFBLAS);
+
+        RefCntAutoPtr<IBuffer> pScratchBuffer;
+        {
+            BufferDesc BuffDesc;
+            BuffDesc.Name = "BLAS Scratch";
+            BuffDesc.Usage = USAGE_DEFAULT;
+            BuffDesc.BindFlags = BIND_RAY_TRACING;
+            BuffDesc.Size = m_pGLTFBLAS->GetScratchBufferSizes().Build;
+            m_pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
+        }
+
+        BLASBuildTriangleData TriData;
+        TriData.GeometryName = "GLTF Model";
+        TriData.pVertexBuffer = m_GLTFVertexBuffer;
+        TriData.VertexStride = sizeof(float3);
+        TriData.VertexCount = static_cast<Uint32>(Positions.size());
+        TriData.VertexValueType = VT_FLOAT32;
+        TriData.VertexComponentCount = 3;
+        TriData.pIndexBuffer = m_GLTFIndexBuffer;
+        TriData.PrimitiveCount = static_cast<Uint32>(Indices.size() / 3);
+        TriData.IndexType = VT_UINT32;
+        TriData.Flags = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+        BuildBLASAttribs Attribs;
+        Attribs.pBLAS = m_pGLTFBLAS;
+        Attribs.pTriangleData = &TriData;
+        Attribs.TriangleDataCount = 1;
+        Attribs.pScratchBuffer = pScratchBuffer;
+        Attribs.BLASTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.GeometryTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.ScratchBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+        m_pImmediateContext->BuildBLAS(Attribs);
+    }
+}
+
+------------------------------------------------------------------------
+void Tutorial21_RayTracing::CreateGLTFBLAS()
+{
+    if (!obj.m_Model || obj.m_Model->Meshes.empty())
+        return;
+
+    // Usar el primer mesh y su primer primitive
+    const auto& Mesh = obj.m_Model->Meshes[0];
+    if (Mesh.Primitives.empty())
+        return;
+
+    const auto& Primitive = Mesh.Primitives[0];
+
+    // Obtener los buffers directamente usando los métodos del modelo
+    RefCntAutoPtr<IBuffer> pVertexBuffer = obj.m_Model->GetVertexBuffer(Primitive.VertexBufferIndex);
+    RefCntAutoPtr<IBuffer> pIndexBuffer  = obj.m_Model->GetIndexBuffer(Primitive.IndexBufferIndex);
+
+    if (!pVertexBuffer || !pIndexBuffer)
+        return;
+
+    const Uint32 VertexCount = Primitive.VertexCount;
+    const Uint32 IndexCount  = Primitive.IndexCount;
+
+    // Crear BLAS
+    {
+        BLASTriangleDesc Triangles;
+        Triangles.GeometryName         = "GLTF Model";
+        Triangles.MaxVertexCount       = VertexCount;
+        Triangles.VertexValueType      = VT_FLOAT32;
+        Triangles.VertexComponentCount = 3; // XYZ
+        Triangles.MaxPrimitiveCount    = IndexCount / 3;
+        Triangles.IndexType            = VT_UINT32;
+
+        BottomLevelASDesc ASDesc;
+        ASDesc.Name          = "GLTF BLAS";
+        ASDesc.Flags         = RAYTRACING_BUILD_AS_PREFER_FAST_TRACE;
+        ASDesc.pTriangles    = &Triangles;
+        ASDesc.TriangleCount = 1;
+
+        m_pDevice->CreateBLAS(ASDesc, &m_pGLTFBLAS);
+        VERIFY_EXPR(m_pGLTFBLAS != nullptr);
+    }
+
+    // Crear buffer temporal (scratch)
+    RefCntAutoPtr<IBuffer> pScratchBuffer;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name      = "GLTF BLAS Scratch Buffer";
+        BuffDesc.Usage     = USAGE_DEFAULT;
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = m_pGLTFBLAS->GetScratchBufferSizes().Build;
+
+        m_pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
+        VERIFY_EXPR(pScratchBuffer != nullptr);
+    }
+
+    // Construir el BLAS
+    {
+        BLASBuildTriangleData TriangleData;
+        TriangleData.GeometryName         = "GLTF Model";
+        TriangleData.pVertexBuffer        = pVertexBuffer;
+        TriangleData.VertexStride         = sizeof(float3); // solo XYZ
+        TriangleData.VertexCount          = VertexCount;
+        TriangleData.VertexValueType      = VT_FLOAT32;
+        TriangleData.VertexComponentCount = 3;
+        TriangleData.pIndexBuffer         = pIndexBuffer;
+        TriangleData.PrimitiveCount       = IndexCount / 3;
+        TriangleData.IndexType            = VT_UINT32;
+        TriangleData.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+        BuildBLASAttribs Attribs;
+        Attribs.pBLAS             = m_pGLTFBLAS;
+        Attribs.pTriangleData     = &TriangleData;
+        Attribs.TriangleDataCount = 1;
+        Attribs.pScratchBuffer    = pScratchBuffer;
+
+        Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.GeometryTransitionMode      = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.ScratchBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+        m_pImmediateContext->BuildBLAS(Attribs);
+    }
+}
+no se pudo importar los datos de tipo primitive             
+
+----------------------------------------------------------------------------------------------
+### PLAN B 
+Se crearon funciones para que funcionaran dentro del diligente la normalizacion y encontrar el sepacio mas pequeño
+para eso se necesita para poder hacer 2 cosas principales
+1. para la primera opcion se deberia tener las normalizaciones para poder renderizar y utilizarlas en el
+GLTFBLAS para tener la textura necesaria
+2.  se necestiaba  para poder encontrar la distancia mas cercana en las cajas para que se acercara a este
+para este segundo punto se tuvo poco tiempo de implementacion por lo que se ve el video hecho en el final
+
+estos son algunos de los errores recopilados a lo largo de la implementacion del proyecto se encuentran en los anexos
