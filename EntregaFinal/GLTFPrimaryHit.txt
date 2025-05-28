@@ -1,0 +1,25 @@
+#include "Common.hlsl"
+#include "PBR_Structures.fxh"
+#include "RenderPBR_Structures.fxh"
+
+struct PrimaryRayPayload
+{
+    float4 Color;
+};
+
+[shader("closesthit")]
+void main(inout PrimaryRayPayload Payload, in BuiltInTriangleIntersectionAttributes Attribs)
+{
+    // Basic PBR material properties (simplified)
+    float3 BaseColor = float3(1.0, 1.0, 1.0); // Replace with texture sampling if needed
+    float3 Normal = normalize(WorldNormal());
+    float Metallic = 0.0;
+    float Roughness = 0.5;
+
+    // Simple lighting calculation
+    float3 LightDir = normalize(g_Constants.LightPos[0].xyz - WorldPos());
+    float NdotL = max(dot(Normal, LightDir), 0.0);
+    float3 Diffuse = BaseColor * NdotL * g_Constants.LightColor[0].xyz;
+
+    Payload.Color = float4(Diffuse, 1.0);
+}
